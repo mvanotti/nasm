@@ -5339,6 +5339,11 @@ static Token *expand_mmac_params(Token * tline)
             Token *tt;
 
             tt = tokenize(tok_text(t));
+            if (tt == NULL) {
+              text = NULL;
+              change = false;
+              break;
+            }
             tt = expand_mmac_params(tt);
             tt = expand_smacro(tt);
             /* Why dup_tlist() here? We should own tt... */
