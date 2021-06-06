@@ -3560,6 +3560,16 @@ static void assign_smacro(const char *mname, bool casesense,
     }
 }
 
+static bool is_expanding_mmacro(Line* expansion) {
+    Line *l;
+    list_for_each(l, expansion) {
+        if (l->finishes != NULL) {
+            return true;
+        }
+    }
+    return false;
+}
+
 /**
  * find and process preprocessor directive in passed line
  * Find out if a line contains a preprocessor directive, and deal
@@ -3934,12 +3944,20 @@ static int do_directive(Token *tline, Token **output)
         t = tline->next = expand_smacro(tline->next);
         t = skip_white(t);
         if (!t) {
-            /* Emulate legacy behavior */
-            do_clear(CLEAR_DEFINE|CLEAR_MMACRO, false);
+            /* Emulate legacy behavior: same as %clear global all */
+            if (is_expanding_mmacro(istk->expansion)) {
+                nasm_nonfatal("cannot clear all macros whilst expanding a multi-line macro");
+                goto done;
+            }
+            do_clear(CLEAR_DEFINE | CLEAR_MMACRO, false);
         } else {
             while ((t = skip_white(t)) && t->type == TOKEN_ID) {
                 const char *txt = tok_text(t);
                 if (!nasm_stricmp(txt, "all")) {
+                    if (is_expanding_mmacro(istk->expansion)) {
+                        nasm_nonfatal("cannot clear all macros whilst expanding a multi-line macro");
+                        goto done;
+                    }
                     do_clear(CLEAR_ALL, context);
                 } else if (!nasm_stricmp(txt, "define") ||
                            !nasm_stricmp(txt, "def") ||
@@ -3954,6 +3972,10 @@ static int do_directive(Token *tline, Token **output)
                     do_clear(CLEAR_ALLDEFINE, context);
                 } else if (!nasm_stricmp(txt, "macro") ||
                            !nasm_stricmp(txt, "mmacro")) {
+                    if (is_expanding_mmacro(istk->expansion)) {
+                        nasm_nonfatal("cannot clear all macros whilst expanding a multi-line macro");
+                        goto done;
+                    }
                     do_clear(CLEAR_MMACRO, context);
                 } else if (!nasm_stricmp(txt, "context") ||
                            !nasm_stricmp(txt, "ctx")) {
@@ -3969,7 +3991,9 @@ static int do_directive(Token *tline, Token **output)
                 } else {
                     nasm_nonfatal("invalid option to %s: %s", dname, txt);
                     t = NULL;
+                    goto done;
                 }
+                t = skip_white(t->next);
             }
         }
 
