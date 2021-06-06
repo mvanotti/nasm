@@ -43,6 +43,7 @@
 #define NASM_BYTEORD_H
 
 #include "compiler.h"
+#include <string.h>
 
 /*
  * Some handy macros that will probably be of use in more than one
@@ -60,24 +61,21 @@
 #if X86_MEMORY
 
 #define WRITESHORT(p,v)                         	\
-    do {                                        	\
-        uint16_t *_ws_p = (uint16_t *)(p);      	\
-        *_ws_p++ = (v);                           	\
-        (p) = (void *)_ws_p;              		\
+    do {                                        	     \
+        memcpy((p), &(uint16_t[]){(v)}, sizeof(uint16_t));   \
+        (p) = (void*) ((uintptr_t)(p) + sizeof(uint16_t)); \
     } while (0)
 
-#define WRITELONG(p,v)                          	\
-    do {                                        	\
-        uint32_t *_wl_p = (uint32_t *)(p);		\
-        *_wl_p++ = (v);                           	\
-        (p) = (void *)_wl_p;              		\
+#define WRITELONG(p,v)                          	     \
+    do {                                        	     \
+        memcpy((p), &(uint32_t[]){(v)}, sizeof(uint32_t));   \
+        (p) = (void*) ((uintptr_t)(p) + sizeof(uint32_t)); \
     } while (0)
 
 #define WRITEDLONG(p,v)                         	\
-    do {                                        	\
-        uint64_t *_wq_p = (uint64_t *)(p);      	\
-        *_wq_p++ = (v);                           	\
-        (p) = (void *)_wq_p;              		\
+    do {                                        	     \
+        memcpy((p), &(uint64_t[]){(v)}, sizeof(uint64_t));   \
+        (p) = (void*) ((uintptr_t)(p) + sizeof(uint64_t)); \
     } while (0)
 
 #else /* !X86_MEMORY */
